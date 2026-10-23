@@ -10,6 +10,6 @@
 - [x] Attempt build/tests, inspect diff and document results/limitations.
 - [x] Verify current feature branch; leave changes unpushed.
 
-Validation attempts are complete; runtime checks remain pending because `dotnet`
-is absent. See [validation.md](validation.md) for commands, the desktop checklist,
-actual static-check results and remaining behavior limitations.
+Build, raster regression tests and Windows cross-publish now pass with .NET SDK 10
+installed in the user directory. Windows graphical smoke tests are still pending.
+See [validation.md](validation.md) for exact commands, results and limitations.

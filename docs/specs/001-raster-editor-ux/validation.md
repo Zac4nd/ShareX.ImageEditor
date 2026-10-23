@@ -2,17 +2,19 @@
 
 ## Results on this host (2026-10-23)
 
-- Branch: `feature/raster-selection-editor-ux`. Changes remain in the working tree;
-  no push, merge or upstream/develop modification.
+- Branch: `feature/raster-selection-editor-ux`.
 - `git diff --check`: passed.
 - Python XML parsing: modified AXAML files and regression project are well-formed.
-  Structural assertions confirmed separate top toolbar, viewport/interaction and
-  bottom toolbar rows. These checks do not compile Avalonia bindings or C#.
-- Build attempted with `dotnet build ShareX.ImageEditor.sln -p:Platform=x64`:
-  **not run**, exit 127, `dotnet: command not found`.
-- Regression harness attempted with the command below: **not run**, same missing
-  SDK. No runtime, native clipboard, graphical layout or interaction success is
-  claimed on this Debian host.
+  Structural assertions confirmed separate toolbar and viewport rows.
+- Installed .NET SDK 10.0.402 in the user directory (`~/.local/share/dotnet`).
+- `dotnet build ShareX.ImageEditor.sln -p:Platform=x64 --configuration Release`:
+  **passed, 0 warnings and 0 errors**.
+- `dotnet run --project tests/ShareX.ImageEditor.RasterTests/ShareX.ImageEditor.RasterTests.csproj -p:Platform=x64 --configuration Release`:
+  **passed, all 7 regression cases**.
+- `dotnet publish src/ShareX.ImageEditor.App/ShareX.ImageEditor.App.csproj -c Release -p:Platform=x64 -r win-x64 --self-contained true -o artifacts/ShareX.ImageEditor-win-x64`:
+  **passed**; self-contained output is approximately 263 MB.
+- Windows graphical interaction, clipboard interoperability, scrolling and layout
+  still require manual smoke testing on Windows; a successful cross-build is not a UI test.
 
 ## Reproduce with .NET 10 SDK
 
