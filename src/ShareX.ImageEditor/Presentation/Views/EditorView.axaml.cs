@@ -89,6 +89,7 @@ namespace ShareX.ImageEditor.Presentation.Views
         private Cursor? _interactionCursorOverride;
         private CursorAssetLoader.CustomCursorKind? _interactionCursorAsset;
         private ContentControl _builtInToolbarsHost = null!;
+        private ContentControl _bottomToolbarHost = null!;
         private EditorBuiltInToolbars? _builtInToolbars;
 
         // Window-level key handler reference (so shortcuts work regardless of focus)
@@ -104,6 +105,7 @@ namespace ShareX.ImageEditor.Presentation.Views
             InitializeComponent();
             _editorThemeScope = this.FindControl<ThemeVariantScope>("EditorThemeScope");
             _builtInToolbarsHost = this.FindControl<ContentControl>("BuiltInToolbarsHost")!;
+            _bottomToolbarHost = this.FindControl<ContentControl>("BottomToolbarHost")!;
 
             _editorCore = new EditorCore();
 
@@ -230,7 +232,7 @@ namespace ShareX.ImageEditor.Presentation.Views
                     _builtInToolbars.ZoomChanged += OnZoomChanged;
                     _builtInToolbars.ZoomToFitRequested += OnZoomPickerZoomToFitRequested;
                     _builtInToolbarsHost.Content = _builtInToolbars;
-                    this.FindControl<ContentControl>("BottomToolbarHost")!.Content = _builtInToolbars.BottomToolbar;
+                    _bottomToolbarHost.Content = _builtInToolbars.BottomToolbar;
 
                     if (IsLoaded)
                     {
@@ -244,7 +246,7 @@ namespace ShareX.ImageEditor.Presentation.Views
                 _builtInToolbars.ZoomChanged -= OnZoomChanged;
                 _builtInToolbars.ZoomToFitRequested -= OnZoomPickerZoomToFitRequested;
                 _builtInToolbarsHost.Content = null;
-                this.FindControl<ContentControl>("BottomToolbarHost")!.Content = null;
+                _bottomToolbarHost.Content = null;
                 _builtInToolbars = null;
             }
         }

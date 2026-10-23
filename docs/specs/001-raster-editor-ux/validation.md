@@ -16,6 +16,61 @@
 - Windows graphical interaction, clipboard interoperability, scrolling and layout
   still require manual smoke testing on Windows; a successful cross-build is not a UI test.
 
+## Linux toolbar investigation (2026-10-24)
+
+Comparison with `origin/develop` found two relevant changes in the feature:
+`EditorBuiltInToolbars` moved from the viewport's star-sized overlay into an Auto
+row, and its constructor removed the bottom `Border` from its XAML parent for
+insertion into a second host. The old `MaxWidth` bindings still depended on an
+ancestor `UserControl.Bounds.Width`. Before arrange that width is zero; reparenting
+also changes which control supplies it. These are layout/ownership hazards, rather
+than evidence of a missing `MainViewModel` or `ToolbarAdapter`.
+
+The correction gives the bottom bar its own `EditorBottomToolbar` XAML root,
+created together with the top bar. No loaded XAML subtree is removed from a panel.
+Both hosts explicitly stretch their content and inherit the editor VM; the top
+bar still binds to `ToolbarAdapter`. The two ancestor-bounds width limits are
+removed so parent layout constraints supply the available width. The primary
+`AnnotationToolbar` retains its own scroll-width cap. Zoom and zoom-to-fit events
+forward through the owning toolbar instance; disabling built-in toolbars detaches
+those editor handlers and clears both hosts before recreation.
+
+The full reported Linux rendering failure has **not** been reproduced here.
+An in-process probe using Avalonia 12.1's layout manager, Skia/Fluent styles and
+stubbed platform services found visible toolbars at 1000 × 700 in both
+`origin/develop` and the original feature. Thus the source comparison identifies
+hazards and the change removes them, but does not establish a confirmed desktop
+root cause. The probe is exploratory, not a native-window or pointer interaction
+test. Direct X11 initialization on this agent failed with `XOpenDisplay failed`.
+
+Validation after the correction:
+
+- SDK: `/home/andrea/.local/share/dotnet/dotnet` (10.0.402).
+- Release solution build with `-p:Platform=x64 --no-restore -m:1 -nodeReuse:false`:
+  **passed, 0 warnings and 0 errors**.
+- Release raster harness build: **passed, 0 warnings and 0 errors**; execution
+  with `--no-build --no-restore`: **all 7 cases passed**.
+- `git diff --check` and XML parsing of all three toolbar/editor AXAML files:
+  **passed**.
+- Exploratory layout probe: passed zero-size startup followed by 1000 × 700,
+  resize to 320 × 240 and 1400 × 900, toolbar hiding/showing, disabling/recreating
+  built-ins, DataContext replacement and detach/reattach. At 320 × 240 the primary
+  scroll viewport measured 310 pixels wide; at 1000 × 700 it measured 892 pixels.
+  The toolbar rows collapsed to zero when hidden/disabled. Main VM, toolbar adapter
+  and bottom Save command bindings resolved; zoom forwarding fired once and an
+  old detached toolbar no longer changed the editor's zoom. This probe used
+  temporary platform stubs/private API access outside the repository and is not
+  part of the committed raster regression harness.
+
+Remaining visual verification: run the standalone Linux app on the affected
+desktop, both without an image and with an image argument. Dismiss the start
+screen, check File menus and tool options, resize narrow/short and restore, scroll
+the primary toolbar to its last tool, use zoom/zoom-to-fit and bottom commands,
+toggle Ctrl+H, and check task mode plus `UseBuiltInToolbars=false`/true and editor
+unload/reload. Confirm both bars paint and accept pointer/keyboard input and the
+viewport stays between them. These checks remain required even after successful
+compilation, raster tests and layout probing.
+
 ## Reproduce with .NET 10 SDK
 
 From the repository root:
@@ -74,9 +129,9 @@ from both zero and nonzero horizontal/vertical scroll offsets.
 
 ## Behavior boundaries and remaining limitations
 
-- Runtime validation is pending because this host lacks the SDK and a tested
-  Avalonia desktop session. Compilation and native clipboard behavior remain
-  unverified; XML/static inspection does not establish either.
+- Compilation and the seven raster cases have passed on this host. Native
+  desktop rendering, pointer input and clipboard interoperability remain
+  unverified; successful builds and in-process layout probes do not establish them.
 - Paste acceptance keeps an editable image annotation. Enter deselects it; Escape
   removes the pending paste as an undoable deletion. Canceling paste does not undo
   the separate cut. Tool changes/normal deselection accept the pending annotation.

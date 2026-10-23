@@ -36,7 +36,10 @@ the same grid cell as the viewport.
    stored origin; different external images/files retain clipboard priority.
 4. Put the top toolbar and bottom actions in separate auto-sized grid rows with
    the viewport in the remaining row. Preserve lazy toolbar creation and event
-   wiring. Compact primary toolbar buttons locally; keep horizontal scrolling,
+   wiring. Give the bottom bar its own XAML root rather than removing and
+   reparenting a child from the top bar's loaded tree. Let the hosts constrain
+   toolbar width instead of binding it to pre-arrange ancestor bounds.
+   Compact primary toolbar buttons locally; keep horizontal scrolling,
    all tools, customizable shortcuts and focus navigation.
 5. Use a UI timer for edge scrolling during crop draw/handle drag and raster drag.
    Retain the pointer in viewport coordinates, scroll a bounded amount each tick,

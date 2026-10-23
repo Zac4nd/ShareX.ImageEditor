@@ -33,7 +33,8 @@ public partial class EditorBuiltInToolbars : UserControl
 {
     public AnnotationToolbar AnnotationToolbar { get; private set; } = null!;
 
-    internal Border BottomToolbar { get; private set; } = null!;
+    // Created separately so each toolbar has a stable XAML root and inherits the host's VM.
+    internal EditorBottomToolbar BottomToolbar { get; } = new();
 
     public event EventHandler<double>? ZoomChanged;
     public event EventHandler? ZoomToFitRequested;
@@ -41,10 +42,9 @@ public partial class EditorBuiltInToolbars : UserControl
     public EditorBuiltInToolbars()
     {
         AvaloniaXamlLoader.Load(this);
+        BottomToolbar.ZoomChanged += OnZoomChanged;
+        BottomToolbar.ZoomToFitRequested += OnZoomToFitRequested;
         AnnotationToolbar = this.FindControl<AnnotationToolbar>("AnnotationToolbarControl")!;
-        // The editor places this existing action bar in its own row below the viewport.
-        BottomToolbar = this.FindControl<Border>("BottomToolbarControl")!;
-        ((Panel)BottomToolbar.Parent!).Children.Remove(BottomToolbar);
     }
 
     public void OpenFileMenu() => AnnotationToolbar.OpenFileMenu();

@@ -634,8 +634,12 @@
 
         </Grid>
 
-        <ContentControl x:Name="BuiltInToolbarsHost" Grid.Row="0"/>
-        <ContentControl x:Name="BottomToolbarHost" Grid.Row="2"/>
+        <ContentControl x:Name="BuiltInToolbarsHost" Grid.Row="0"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch"/>
+        <ContentControl x:Name="BottomToolbarHost" Grid.Row="2"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch"/>
 
         <Border Classes="popup-surface zoom-upward app-toast"
                 Classes.open="{Binding IsNotificationOpen}"
