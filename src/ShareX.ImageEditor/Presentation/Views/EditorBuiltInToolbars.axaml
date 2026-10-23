@@ -10,6 +10,8 @@
             <Setter Property="MinWidth" Value="32"/>
             <Setter Property="Height" Value="32"/>
             <Setter Property="MinHeight" Value="32"/>
+            <!-- Leave room for the 18px Lucide glyph inside a compact button. -->
+            <Setter Property="Padding" Value="4"/>
         </Style>
     </UserControl.Styles>
     <Grid>

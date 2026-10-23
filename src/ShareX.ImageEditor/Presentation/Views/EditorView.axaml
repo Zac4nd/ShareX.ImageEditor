@@ -175,7 +175,8 @@
         <Grid RowDefinitions="Auto,*,Auto">
 
         <!-- Dedicated viewport row between the toolbars. -->
-        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Background="{DynamicResource ShareX.Brush.Background.Main}">
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ClipToBounds="True"
+              Background="{DynamicResource ShareX.Brush.Background.Main}">
 
             <!-- Left Sidebar (Settings Panel) -->
             <Border Grid.Column="0"

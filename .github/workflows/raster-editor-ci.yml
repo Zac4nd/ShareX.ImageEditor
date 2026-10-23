@@ -18,6 +18,10 @@ jobs:
         run: dotnet build ShareX.ImageEditor.sln -p:Platform=x64 --configuration Release
       - name: Run raster regression cases
         run: dotnet run --project tests/ShareX.ImageEditor.RasterTests/ShareX.ImageEditor.RasterTests.csproj -p:Platform=x64 --configuration Release
+      - name: Standalone font, theme and layout regressions (Skia, no desktop)
+        run: dotnet run --project tests/ShareX.ImageEditor.UiTests/ShareX.ImageEditor.UiTests.csproj -p:Platform=x64 --configuration Release
+      - name: Library host font, theme and layout regressions
+        run: dotnet run --project tests/ShareX.ImageEditor.UiTests/ShareX.ImageEditor.UiTests.csproj -p:Platform=x64 --configuration Release --no-build -- --library-host
       - name: Publish standalone Windows app
         run: dotnet publish src/ShareX.ImageEditor.App/ShareX.ImageEditor.App.csproj -c Release -p:Platform=x64 -r win-x64 --self-contained true -o artifacts/ShareX.ImageEditor-win-x64
       - uses: actions/upload-artifact@v4
