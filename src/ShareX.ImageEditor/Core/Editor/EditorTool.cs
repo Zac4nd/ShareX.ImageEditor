@@ -49,5 +49,6 @@ public enum EditorTool
     Magnify,
     Spotlight,
     Crop,
-    CutOut
+    CutOut,
+    RasterSelect
 }

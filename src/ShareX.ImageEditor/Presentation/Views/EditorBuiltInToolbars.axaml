@@ -6,9 +6,17 @@
              xmlns:controls="using:ShareX.ImageEditor.Presentation.Controls"
              x:Class="ShareX.ImageEditor.Presentation.Views.EditorBuiltInToolbars"
              x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <Style Selector="Button.toolbar-button">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="MinWidth" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinHeight" Value="32"/>
+        </Style>
+    </UserControl.Styles>
     <Grid>
         <Border Classes="editor-toolbar-host top"
-                Classes.hidden="{Binding AreToolbarsHidden}"
+                IsVisible="{Binding ShowToolbars}"
                 VerticalAlignment="Top"
                 HorizontalAlignment="Stretch"
                 IsHitTestVisible="{Binding ShowToolbars}">
@@ -19,11 +27,11 @@
                                         MaxWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
         </Border>
 
-        <Border Classes="editor-toolbar-host bottom"
-                Classes.hidden="{Binding AreToolbarsHidden}"
+        <Border x:Name="BottomToolbarControl" Classes="editor-toolbar-host bottom"
+                IsVisible="{Binding ShowToolbars}"
                 VerticalAlignment="Bottom"
                 HorizontalAlignment="Center"
-                Padding="4"
+                Padding="4,8"
                 Background="{DynamicResource ShareX.Brush.Background.Toolbar}"
                 BorderBrush="{DynamicResource ShareX.Brush.Border}"
                 BorderThickness="1"

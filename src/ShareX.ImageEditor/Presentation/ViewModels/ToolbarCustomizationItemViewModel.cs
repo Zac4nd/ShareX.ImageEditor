@@ -50,6 +50,7 @@ public sealed class ToolbarCustomizationItemViewModel : ViewModelBase
     {
         new ToolbarItemDefinition(FileItemId, null, Strings.ToolbarCustomizationItemViewModel_File, EditorIcons.FileMenu, "", true, false, false),
         CreateToolDefinition(EditorTool.Select, Strings.ToolbarCustomizationItemViewModel_Select, EditorIcons.ToolSelect, "V", beginGroupByDefault: true),
+        CreateToolDefinition(EditorTool.RasterSelect, "Select pixels", EditorIcons.ToolRasterSelect, "Q"),
         CreateToolDefinition(EditorTool.Rectangle, Strings.ToolbarCustomizationItemViewModel_Rectangle, EditorIcons.ToolRectangle, "R"),
         CreateToolDefinition(EditorTool.Ellipse, Strings.ToolbarCustomizationItemViewModel_Ellipse, EditorIcons.ToolEllipse, "E"),
         CreateToolDefinition(EditorTool.Line, Strings.ToolbarCustomizationItemViewModel_Line, EditorIcons.ToolLine, "L"),

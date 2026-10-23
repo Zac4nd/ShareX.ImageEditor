@@ -45,11 +45,17 @@ namespace ShareX.ImageEditor.Presentation.Views
             if (ReferenceEquals(_clipboardAnnotation, annotation)) return;
             var previous = _clipboardAnnotation;
             _clipboardAnnotation = annotation;
+            _clipboardIsRaster = false;
             (previous as IDisposable)?.Dispose();
         }
 
         private async void OnCutRequested(object? sender, EventArgs e)
         {
+            if (_rasterSelection.HasValue)
+            {
+                await CopyRasterSelectionAsync(cut: true);
+                return;
+            }
             if (_selectionController.SelectedShape?.Tag is Annotation annotation)
             {
                 // Copy to internal clipboard
@@ -84,6 +90,11 @@ namespace ShareX.ImageEditor.Presentation.Views
 
         private async void OnCopyRequested(object? sender, EventArgs e)
         {
+            if (_rasterSelection.HasValue)
+            {
+                await CopyRasterSelectionAsync(cut: false);
+                return;
+            }
             if (_selectionController.SelectedShape?.Tag is Annotation annotation)
             {
                 // Deep clone to internal clipboard
@@ -138,7 +149,13 @@ namespace ShareX.ImageEditor.Presentation.Views
                     var clipboardBitmap = await clipboard.TryGetBitmapAsync();
                     if (clipboardBitmap != null)
                     {
-                        (clipboardBitmap as IDisposable)?.Dispose();
+                        bool isRaster = IsRasterClipboardBitmap(clipboardBitmap);
+                        clipboardBitmap.Dispose();
+                        if (isRaster)
+                        {
+                            PasteInternalShape();
+                            return;
+                        }
                         await PasteImageFromClipboard();
                         return;
                     }
@@ -161,11 +178,17 @@ namespace ShareX.ImageEditor.Presentation.Views
         {
             if (_clipboardAnnotation == null) return;
 
+            bool rasterPaste = _clipboardIsRaster;
+            if (rasterPaste && DataContext is MainViewModel rasterVm)
+            {
+                rasterVm.SelectToolCommand.Execute(EditorTool.Select);
+                ResetRasterSelection();
+            }
             // Clone again from clipboard so we can paste multiple times
             var newAnnotation = _clipboardAnnotation.Clone();
 
             // Offset position so it's visible (10px offset)
-            const float offset = 20f;
+            float offset = rasterPaste ? 0f : 20f;
 
             // Adjust points based on type
             if (newAnnotation is ImageAnnotation img)
@@ -192,6 +215,7 @@ namespace ShareX.ImageEditor.Presentation.Views
 
             // Add to Core
             _editorCore.AddAnnotation(newAnnotation);
+            if (rasterPaste) _floatingRasterPaste = newAnnotation.Id;
 
             // Create UI
             var control = CreateControlForAnnotation(newAnnotation);
@@ -211,7 +235,9 @@ namespace ShareX.ImageEditor.Presentation.Views
             if (DataContext is MainViewModel vm)
             {
                 vm.HasAnnotations = true;
+                if (rasterPaste) vm.ShowNotification("Move pasted pixels; Enter accepts, Escape cancels.");
             }
+            Focus();
         }
 
         /// <summary>

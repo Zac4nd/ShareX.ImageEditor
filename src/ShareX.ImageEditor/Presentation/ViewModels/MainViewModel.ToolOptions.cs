@@ -1027,6 +1027,7 @@ namespace ShareX.ImageEditor.Presentation.ViewModels
                 return tool switch
                 {
                     EditorTool.Select => Strings.ToolbarCustomizationItemViewModel_Select,
+                    EditorTool.RasterSelect => "Select pixels",
                     EditorTool.Rectangle => Strings.ToolbarCustomizationItemViewModel_Rectangle,
                     EditorTool.Ellipse => Strings.ToolbarCustomizationItemViewModel_Ellipse,
                     EditorTool.Line => Strings.ToolbarCustomizationItemViewModel_Line,
