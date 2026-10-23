@@ -55,7 +55,7 @@ namespace ShareX.ImageEditor.Core.Editor;
 /// Example: <c>Dispatcher.UIThread.Post(() => { /* UI update */ });</c>
 /// </para>
 /// </summary>
-public class EditorCore : IDisposable
+public partial class EditorCore : IDisposable
 {
     #region Events
 
@@ -1209,6 +1209,13 @@ public class EditorCore : IDisposable
     private void SyncNumberCounterFromAnnotations()
     {
         NumberCounter = _annotations.OfType<NumberAnnotation>().Select(annotation => annotation.Number).DefaultIfEmpty(0).Max() + 1;
+    }
+
+    /// <summary>Capture history before an external controller edits annotation geometry.</summary>
+    public void RecordAnnotationChange()
+    {
+        _history.CreateAnnotationsMemento(force: true);
+        HistoryChanged?.Invoke();
     }
 
     /// <summary>

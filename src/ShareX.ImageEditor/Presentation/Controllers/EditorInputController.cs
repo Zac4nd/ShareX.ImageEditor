@@ -108,6 +108,39 @@ public class EditorInputController
 
     public bool IsDrawingActive => _isDrawing;
     public bool IsCropInteractionActive => _isDraggingCropHandle;
+    internal bool IsRegionInteractionActive => ViewModel?.ActiveTool == EditorTool.Crop && (_isDrawing || _isDraggingCropHandle);
+    internal bool HasActiveRegion => ViewModel?.ActiveTool == EditorTool.Crop && (_cropActive || _isDrawing);
+
+    internal void CancelRegionInteraction()
+    {
+        if (IsRegionInteractionActive && _view.FindControl<Canvas>("AnnotationCanvas") is { } canvas)
+            CancelActiveRegionDrawing(canvas);
+    }
+
+    // Pointer motion and stationary edge scrolling use the same image-space geometry.
+    internal void UpdateRegionDrag(Point point, KeyModifiers modifiers)
+    {
+        var canvas = _view.FindControl<Canvas>("AnnotationCanvas");
+        if (canvas == null || !IsRegionInteractionActive) return;
+        point = ClampPointToCanvasBounds(canvas, point);
+        if (_isDraggingCropHandle)
+        {
+            UpdateCropOverlayBounds(CropAnnotation.ResizeBounds(_draggedCropHandleTag!,
+                _cropDragStartPoint, point, _cropDragStartRect, canvas.Bounds.Width, canvas.Bounds.Height));
+            return;
+        }
+        if (_currentShape?.Name != "CropOverlay") return;
+        if (modifiers.HasFlag(KeyModifiers.Shift))
+        {
+            double size = Math.Max(Math.Abs(point.X - _startPoint.X), Math.Abs(point.Y - _startPoint.Y));
+            size = Math.Min(size, point.X < _startPoint.X ? _startPoint.X : canvas.Bounds.Width - _startPoint.X);
+            size = Math.Min(size, point.Y < _startPoint.Y ? _startPoint.Y : canvas.Bounds.Height - _startPoint.Y);
+            point = new Point(_startPoint.X + (point.X < _startPoint.X ? -size : size),
+                _startPoint.Y + (point.Y < _startPoint.Y ? -size : size));
+        }
+        UpdateQuickCropPreview(new Rect(Math.Min(_startPoint.X, point.X), Math.Min(_startPoint.Y, point.Y),
+            Math.Abs(point.X - _startPoint.X), Math.Abs(point.Y - _startPoint.Y)));
+    }
 
     private MainViewModel? ViewModel => _view.DataContext as MainViewModel;
     private bool IsQuickCropEnabled => ViewModel?.Options.QuickCrop == true;
@@ -590,13 +623,10 @@ public class EditorInputController
         // Handle active crop handle / move drag
         if (_isDraggingCropHandle)
         {
-            var cvs = _view.FindControl<Canvas>("AnnotationCanvas") ?? sender as Canvas;
-            if (cvs != null)
+            if (_view.FindControl<Canvas>("AnnotationCanvas") is { } cvs)
             {
                 _view.ApplyInteractionCursor(CursorAssetLoader.CustomCursorKind.ClosedHand);
-                var cropCurrent = e.GetPosition(cvs);
-                var newRect = CropAnnotation.ResizeBounds(_draggedCropHandleTag!, _cropDragStartPoint, cropCurrent, _cropDragStartRect, cvs.Bounds.Width, cvs.Bounds.Height);
-                UpdateCropOverlayBounds(newRect);
+                UpdateRegionDrag(e.GetPosition(cvs), e.KeyModifiers);
             }
             e.Handled = true;
             return;
@@ -720,20 +750,7 @@ public class EditorInputController
 
         if (vm.ActiveTool == EditorTool.Crop && _currentShape.Name == "CropOverlay")
         {
-            var cropLeft = Math.Min(_startPoint.X, currentPoint.X);
-            var cropTop = Math.Min(_startPoint.Y, currentPoint.Y);
-            var cropWidth = Math.Abs(currentPoint.X - _startPoint.X);
-            var cropHeight = Math.Abs(currentPoint.Y - _startPoint.Y);
-
-            if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
-            {
-                cropWidth = Math.Max(cropWidth, cropHeight);
-                cropHeight = cropWidth;
-                if (currentPoint.X < _startPoint.X) cropLeft = _startPoint.X - cropWidth;
-                if (currentPoint.Y < _startPoint.Y) cropTop = _startPoint.Y - cropHeight;
-            }
-
-            UpdateQuickCropPreview(new Rect(cropLeft, cropTop, cropWidth, cropHeight));
+            UpdateRegionDrag(currentPoint, e.KeyModifiers);
             return;
         }
 
@@ -1094,7 +1111,15 @@ public class EditorInputController
         bool hasVisibleOverlay = cropOverlay != null && cropOverlay.IsVisible;
         if (!_cropActive && !hasVisibleOverlay) return false;
 
+        if (ViewModel?.ActiveTool == EditorTool.Crop || _currentShape?.Name == "CropOverlay")
+        {
+            _isDrawing = false;
+            _isMovingShapeDuringCreation = false;
+            _wasCtrlHeldDuringDraw = false;
+            if (_currentShape?.Name == "CropOverlay") _currentShape = null;
+        }
         HideCropChrome();
+        _view.RestoreEditorSurfaceCursorForActiveTool();
 
         if (cropOverlay != null)
         {

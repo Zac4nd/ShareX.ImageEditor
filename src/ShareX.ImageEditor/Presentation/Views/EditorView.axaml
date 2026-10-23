@@ -172,10 +172,11 @@
 
     <ThemeVariantScope x:Name="EditorThemeScope"
                        RequestedThemeVariant="{x:Static theming:ThemeManager.ShareXDark}">
-        <Grid RowDefinitions="*">
+        <Grid RowDefinitions="Auto,*,Auto">
 
-        <!-- Row 0: Main Content Area with Preview and Sidebar (Background Layer) -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Background="{DynamicResource ShareX.Brush.Background.Main}">
+        <!-- Dedicated viewport row between the toolbars. -->
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ClipToBounds="True"
+              Background="{DynamicResource ShareX.Brush.Background.Main}">
 
             <!-- Left Sidebar (Settings Panel) -->
             <Border Grid.Column="0"
@@ -480,7 +481,7 @@
             </Border>
 
             <!-- Central Preview Canvas -->
-            <Grid Grid.Column="1" Margin="8">
+            <Grid Grid.Column="1" Margin="8" ClipToBounds="True">
                 <ScrollViewer Name="CanvasScrollViewer"
                               Background="Transparent"
                               HorizontalScrollBarVisibility="Auto"
@@ -561,7 +562,8 @@
                                                                 VerticalAlignment="Stretch"
                                                                 Cursor="Arrow"
                                                                 PointerMoved="OnCanvasPointerMoved"
-                                                                PointerReleased="OnCanvasPointerReleased">
+                                                                PointerCaptureLost="OnRegionCaptureLost"
+                            PointerReleased="OnCanvasPointerReleased">
                                                         </Canvas>
                                                     </Grid>
                                                 </Canvas>
@@ -590,7 +592,15 @@
                             Cursor="Arrow"
                             PointerPressed="OnCanvasPointerPressed"
                             PointerMoved="OnCanvasPointerMoved"
+                            PointerCaptureLost="OnRegionCaptureLost"
                             PointerReleased="OnCanvasPointerReleased">
+                        <Rectangle Name="RasterSelectionOverlay"
+                                   IsVisible="False"
+                                   IsHitTestVisible="False"
+                                   Stroke="White"
+                                   StrokeThickness="1"
+                                   StrokeDashArray="4,2"
+                                   Fill="#180078D4" />
                         <Rectangle Name="CropOverlay"
                                    IsVisible="False"
                                    Stroke="White"
@@ -625,14 +635,19 @@
 
         </Grid>
 
-        <ContentControl x:Name="BuiltInToolbarsHost" Grid.Row="0"/>
+        <ContentControl x:Name="BuiltInToolbarsHost" Grid.Row="0"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch"/>
+        <ContentControl x:Name="BottomToolbarHost" Grid.Row="2"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch"/>
 
         <Border Classes="popup-surface zoom-upward app-toast"
                 Classes.open="{Binding IsNotificationOpen}"
-                Grid.Row="0"
+                Grid.Row="1"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Bottom"
-                Margin="16,0,16,68"
+                Margin="16,0,16,12"
                 MaxWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=UserControl}}"
                 IsVisible="{Binding IsNotificationVisible}"
                 Cursor="Hand"
@@ -657,7 +672,7 @@
         </Border>
 
         <Border x:Name="InteractionCaptureLayer"
-                Grid.Row="0"
+                Grid.Row="1"
                 Background="Transparent"
                 IsVisible="False"
                 IsHitTestVisible="False"
@@ -665,10 +680,11 @@
                 ZIndex="25"
                 PointerPressed="OnCanvasPointerPressed"
                 PointerMoved="OnCanvasPointerMoved"
+                PointerCaptureLost="OnRegionCaptureLost"
                 PointerReleased="OnCanvasPointerReleased"/>
 
         <!-- Effect Browser Panel Overlay -->
-        <Grid Grid.Row="0"
+        <Grid Grid.Row="0" Grid.RowSpan="3"
               IsHitTestVisible="{Binding IsEffectBrowserVisible}"
               HorizontalAlignment="Stretch"
               VerticalAlignment="Stretch"
@@ -699,7 +715,7 @@
 
         <!-- Editor-owned dialogs only. App dialogs use the shell card so they stay opaque. -->
         <Border x:Name="EditorModalOverlay"
-                Grid.Row="0" Grid.RowSpan="1"
+                Grid.Row="0" Grid.RowSpan="3"
                 Classes="modal-scrim"
                 IsVisible="{Binding IsEditorModalOpen}"
                 IsHitTestVisible="True">

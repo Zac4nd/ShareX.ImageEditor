@@ -33,12 +33,17 @@ public partial class EditorBuiltInToolbars : UserControl
 {
     public AnnotationToolbar AnnotationToolbar { get; private set; } = null!;
 
+    // Created separately so each toolbar has a stable XAML root and inherits the host's VM.
+    internal EditorBottomToolbar BottomToolbar { get; } = new();
+
     public event EventHandler<double>? ZoomChanged;
     public event EventHandler? ZoomToFitRequested;
 
     public EditorBuiltInToolbars()
     {
         AvaloniaXamlLoader.Load(this);
+        BottomToolbar.ZoomChanged += OnZoomChanged;
+        BottomToolbar.ZoomToFitRequested += OnZoomToFitRequested;
         AnnotationToolbar = this.FindControl<AnnotationToolbar>("AnnotationToolbarControl")!;
     }
 

@@ -58,6 +58,8 @@ namespace ShareX.ImageEditor.Presentation.Views
 
         private static readonly Cursor ArrowCursor = new(StandardCursorType.Arrow);
         internal const double OverlayCanvasBleed = 24;
+        private bool _annotationDragHistoryRecorded;
+        private Point _annotationDragStart;
 
         private readonly EditorZoomController _zoomController;
         private readonly EditorSelectionController _selectionController;
@@ -87,6 +89,7 @@ namespace ShareX.ImageEditor.Presentation.Views
         private Cursor? _interactionCursorOverride;
         private CursorAssetLoader.CustomCursorKind? _interactionCursorAsset;
         private ContentControl _builtInToolbarsHost = null!;
+        private ContentControl _bottomToolbarHost = null!;
         private EditorBuiltInToolbars? _builtInToolbars;
 
         // Window-level key handler reference (so shortcuts work regardless of focus)
@@ -102,6 +105,7 @@ namespace ShareX.ImageEditor.Presentation.Views
             InitializeComponent();
             _editorThemeScope = this.FindControl<ThemeVariantScope>("EditorThemeScope");
             _builtInToolbarsHost = this.FindControl<ContentControl>("BuiltInToolbarsHost")!;
+            _bottomToolbarHost = this.FindControl<ContentControl>("BottomToolbarHost")!;
 
             _editorCore = new EditorCore();
 
@@ -228,6 +232,7 @@ namespace ShareX.ImageEditor.Presentation.Views
                     _builtInToolbars.ZoomChanged += OnZoomChanged;
                     _builtInToolbars.ZoomToFitRequested += OnZoomPickerZoomToFitRequested;
                     _builtInToolbarsHost.Content = _builtInToolbars;
+                    _bottomToolbarHost.Content = _builtInToolbars.BottomToolbar;
 
                     if (IsLoaded)
                     {
@@ -241,6 +246,7 @@ namespace ShareX.ImageEditor.Presentation.Views
                 _builtInToolbars.ZoomChanged -= OnZoomChanged;
                 _builtInToolbars.ZoomToFitRequested -= OnZoomPickerZoomToFitRequested;
                 _builtInToolbarsHost.Content = null;
+                _bottomToolbarHost.Content = null;
                 _builtInToolbars = null;
             }
         }
@@ -561,6 +567,7 @@ namespace ShareX.ImageEditor.Presentation.Views
             DetachViewModel();
 
             UnhookAnnotationToolbarEvents();
+            ResetRasterSelection();
             StopEasterEggs();
             ClearEffectPreviewCache();
             SetPlatformSettings(null);
@@ -987,6 +994,8 @@ namespace ShareX.ImageEditor.Presentation.Views
                 }
                 else if (e.PropertyName == nameof(MainViewModel.ActiveTool))
                 {
+                    ResetRasterSelection();
+                    _floatingRasterPaste = null;
                     _editorCore.ActiveTool = vm.ActiveTool;
 
                     if (vm.ActiveTool == EditorTool.Crop)
@@ -1329,6 +1338,7 @@ namespace ShareX.ImageEditor.Presentation.Views
             DetachParentWindow();
             DetachViewModel();
             UnhookAnnotationToolbarEvents();
+            ResetRasterSelection();
             StopEasterEggs();
             _selectionController.RequestUpdateEffect -= OnRequestUpdateEffect;
             ClearEffectPreviewCache();
@@ -1366,6 +1376,8 @@ namespace ShareX.ImageEditor.Presentation.Views
         {
             if (vm.PreviewImage == null || _canvasControl == null) return;
             if (_isSyncingToVM) return; // Ignore updates that we just pushed to VM
+            ResetRasterSelection();
+            _floatingRasterPaste = null;
 
             try
             {
@@ -1450,7 +1462,7 @@ namespace ShareX.ImageEditor.Presentation.Views
 
         private void QueueAutoCopyImageToClipboard(MainViewModel vm)
         {
-            if (_workspaceDisposed || !vm.Options.AutoCopyImageToClipboard || !vm.HasPreviewImage)
+            if (_workspaceDisposed || _rasterSelection.HasValue || _floatingRasterPaste.HasValue || _rasterClipboardBusy || !vm.Options.AutoCopyImageToClipboard || !vm.HasPreviewImage)
             {
                 return;
             }
@@ -1470,7 +1482,7 @@ namespace ShareX.ImageEditor.Presentation.Views
 
         private async void AutoCopyImageToClipboard(MainViewModel vm)
         {
-            if (!vm.Options.AutoCopyImageToClipboard || !vm.HasPreviewImage)
+            if (_rasterSelection.HasValue || _floatingRasterPaste.HasValue || _rasterClipboardBusy || !vm.Options.AutoCopyImageToClipboard || !vm.HasPreviewImage)
             {
                 return;
             }
@@ -1498,7 +1510,7 @@ namespace ShareX.ImageEditor.Presentation.Views
 
             if (!e.Handled)
             {
-                _inputController.OnCanvasPointerPressed(sender, e);
+                OnCanvasPointerPressed(sender, e);
             }
         }
 
@@ -1514,16 +1526,47 @@ namespace ShareX.ImageEditor.Presentation.Views
 
         private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
         {
+            if (e.Handled || TryBeginRasterSelection(e)) return;
+            _annotationDragHistoryRecorded = false;
+            _annotationDragStart = e.GetPosition(this);
             _inputController.OnCanvasPointerPressed(sender, e);
+            if (_floatingRasterPaste.HasValue &&
+                (_selectionController.SelectedShape?.Tag as Annotation)?.Id != _floatingRasterPaste)
+                _floatingRasterPaste = null;
+            TrackRegionPointer(e);
         }
 
         private void OnCanvasPointerMoved(object? sender, PointerEventArgs e)
         {
+            if (_rasterDragging && this.FindControl<Canvas>("AnnotationCanvas") is { } canvas)
+            {
+                TrackRegionPointer(e);
+                UpdateRasterSelection(e.GetPosition(canvas));
+                e.Handled = true;
+                return;
+            }
+            if (!_annotationDragHistoryRecorded && _selectionController.IsInteractionActive &&
+                _selectionController.SelectedShape?.Tag is Annotation && e.GetPosition(this) != _annotationDragStart)
+            {
+                _editorCore.RecordAnnotationChange();
+                _annotationDragHistoryRecorded = true;
+            }
             _inputController.OnCanvasPointerMoved(sender, e);
+            TrackRegionPointer(e);
         }
 
         private void OnCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
         {
+            StopRegionAutoScroll();
+            if (_rasterDragging)
+            {
+                if (this.FindControl<Canvas>("AnnotationCanvas") is { } canvas)
+                    UpdateRasterSelection(e.GetPosition(canvas));
+                _rasterDragging = false;
+                e.Pointer.Capture(null);
+                e.Handled = true;
+                return;
+            }
             _inputController.OnCanvasPointerReleased(sender, e);
         }
 
@@ -1562,6 +1605,11 @@ namespace ShareX.ImageEditor.Presentation.Views
             // Skip shortcuts when a modal dialog is open (e.g. emoji picker search box)
             if (DataContext is MainViewModel { IsModalOpen: true }) return;
 
+            if (HandleRasterKeyDown(e))
+            {
+                e.Handled = true;
+                return;
+            }
             if (HandleEasterEggKeyDown(e)) return;
 
             if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && !_inputController.IsDrawingActive)
@@ -1666,6 +1714,7 @@ namespace ShareX.ImageEditor.Presentation.Views
                     {
                         double dx = e.Key == Key.Left ? -step : (e.Key == Key.Right ? step : 0);
                         double dy = e.Key == Key.Up ? -step : (e.Key == Key.Down ? step : 0);
+                        _editorCore.RecordAnnotationChange();
                         _selectionController.MoveSelectedShape(dx, dy);
                         e.Handled = true;
                     }
@@ -1713,6 +1762,7 @@ namespace ShareX.ImageEditor.Presentation.Views
         private void OnKeyUp(object? sender, KeyEventArgs e)
         {
             _inputController.OnKeyUp(sender ?? this, e);
+            _regionModifiers = e.KeyModifiers;
 
             if (DataContext is MainViewModel vm && e.Key == Key.Escape && e.KeyModifiers == KeyModifiers.None)
             {
@@ -1749,8 +1799,13 @@ namespace ShareX.ImageEditor.Presentation.Views
                 switch (e.Key)
                 {
                     case Key.Escape:
-                        if (_inputController.CancelCrop())
+                        if (CancelRasterInteraction())
                         {
+                            e.Handled = true;
+                        }
+                        else if (_inputController.CancelCrop())
+                        {
+                            ResetRasterSelection();
                             e.Handled = true;
                         }
                         else if (_selectionController.SelectedShape != null)
@@ -1777,6 +1832,8 @@ namespace ShareX.ImageEditor.Presentation.Views
 
         private void PerformUndo()
         {
+            ResetRasterSelection();
+            _floatingRasterPaste = null;
             if (_editorCore.CanUndo)
             {
                 _editorCore.Undo();
@@ -1786,6 +1843,8 @@ namespace ShareX.ImageEditor.Presentation.Views
 
         private void PerformRedo()
         {
+            ResetRasterSelection();
+            _floatingRasterPaste = null;
             if (_editorCore.CanRedo)
             {
                 _editorCore.Redo();
@@ -1794,6 +1853,8 @@ namespace ShareX.ImageEditor.Presentation.Views
 
         private void OnDeselectRequested(object? sender, EventArgs e)
         {
+            ResetRasterSelection();
+            _floatingRasterPaste = null;
             _inputController.CancelCrop();
             _selectionController.ClearSelection();
         }

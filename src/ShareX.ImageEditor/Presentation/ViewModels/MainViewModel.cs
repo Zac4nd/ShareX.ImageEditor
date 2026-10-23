@@ -371,6 +371,21 @@ namespace ShareX.ImageEditor.Presentation.ViewModels
             }
         }
 
+        private bool _hasRasterSelection;
+        public bool HasRasterSelection
+        {
+            get => _hasRasterSelection;
+            internal set
+            {
+                if (SetProperty(ref _hasRasterSelection, value))
+                {
+                    CutAnnotationCommand.NotifyCanExecuteChanged();
+                    CopyAnnotationCommand.NotifyCanExecuteChanged();
+                }
+            }
+        }
+        public bool CanCopySelection => HasSelectedAnnotation || HasRasterSelection;
+
         private bool _hasAnnotations;
         /// <summary>
         /// Whether there are any annotations on the canvas. Used for Clear All button CanExecute.
@@ -686,13 +701,13 @@ namespace ShareX.ImageEditor.Presentation.ViewModels
             PasteRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        [RelayCommand(CanExecute = nameof(HasSelectedAnnotation))]
+        [RelayCommand(CanExecute = nameof(CanCopySelection))]
         private void CutAnnotation()
         {
             CutAnnotationRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        [RelayCommand(CanExecute = nameof(HasSelectedAnnotation))]
+        [RelayCommand(CanExecute = nameof(CanCopySelection))]
         private void CopyAnnotation()
         {
             CopyAnnotationRequested?.Invoke(this, EventArgs.Empty);

@@ -30,6 +30,7 @@ namespace ShareX.ImageEditor.Presentation.Theming
     public static class EditorIcons
     {
         public const string ToolSelect = LucideIcons.mouse_pointer_2;
+        public const string ToolRasterSelect = LucideIcons.box_select;
         public const string ToolRectangle = LucideIcons.square;
         public const string ToolEllipse = LucideIcons.circle;
         public const string ToolLine = LucideIcons.minus;
@@ -99,6 +100,7 @@ namespace ShareX.ImageEditor.Presentation.Theming
         public static string ForTool(EditorTool tool) => tool switch
         {
             EditorTool.Select => ToolSelect,
+            EditorTool.RasterSelect => ToolRasterSelect,
             EditorTool.Rectangle => ToolRectangle,
             EditorTool.Ellipse => ToolEllipse,
             EditorTool.Line => ToolLine,
