@@ -1,0 +1,29 @@
+name: Publish portable Windows preview
+on:
+  push:
+    branches: [feature/raster-selection-editor-ux]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  portable-preview:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run raster regression tests
+        run: dotnet run --project tests/ShareX.ImageEditor.RasterTests/ShareX.ImageEditor.RasterTests.csproj -p:Platform=x64 -c Release
+      - name: Publish portable editor
+        run: dotnet publish src/ShareX.ImageEditor.App/ShareX.ImageEditor.App.csproj -p:Platform=x64 -c Release -r win-x64 --self-contained true -o portable
+      - name: Zip portable editor
+        shell: pwsh
+        run: Compress-Archive -Path portable/* -DestinationPath ShareX.ImageEditor-win-x64-portable.zip
+      - name: Publish preview release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          gh release delete preview-raster-editor --yes --cleanup-tag 2>$null
+          gh release create preview-raster-editor ShareX.ImageEditor-win-x64-portable.zip --target $env:GITHUB_SHA --title 'Raster editor preview (Windows x64)' --notes 'Standalone portable preview of ShareX.ImageEditor. Extract ZIP and run ShareX.ImageEditor.App.exe. Independent from installed ShareX; not a Scoop package. See PR #1 for functionality and test coverage.' --prerelease --latest=false
