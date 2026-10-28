@@ -41,3 +41,6 @@ jobs:
           } else {
             gh release create preview-raster-editor ShareX.ImageEditor-win-x64-portable.zip --target $env:GITHUB_SHA --title 'Raster editor preview (Windows x64)' --notes 'Portable standalone editor: extract ZIP and run ShareX.ImageEditor.App.exe. Does not replace ShareX installed via Scoop.' --prerelease --latest=false
           }
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub release upload failed' }
+          gh release view preview-raster-editor --json assets --jq '.assets[].name'
+          if ($LASTEXITCODE -ne 0) { throw 'Release verification failed' }
